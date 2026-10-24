@@ -37,7 +37,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Tic Tac Toe REST API",
         Version = "v1",
-        Description = "ABB Senior Software Engineer Assessment - Tic Tac Toe Backend Web API"
+        Description = "Full-Stack Senior Software Engineer Assessment - Tic Tac Toe Backend Web API"
     });
 });
 

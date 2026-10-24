@@ -8,7 +8,7 @@ import { GameMode, GameState, Scoreboard } from './models/game.models';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title = 'ABB Tic Tac Toe';
+  title = 'Tic Tac Toe';
   selectedMode: GameMode = 'TwoPlayer';
   gameState: GameState | null = null;
   scoreboard: Scoreboard = { xWins: 0, oWins: 0, draws: 0 };
@@ -16,11 +16,78 @@ export class AppComponent implements OnInit {
   isAiThinking = false;
   errorMessage: string | null = null;
 
+  // Theme support
+  isDarkMode = true;
+
+  // Customizable Player Names
+  playerXName = 'Player X';
+  playerOName = 'Player O';
+  showNameSettings = false;
+
   constructor(private gameService: GameService) {}
 
   ngOnInit(): void {
+    this.initTheme();
+    this.initPlayerNames();
     this.startNewGame(this.selectedMode);
     this.refreshScoreboard();
+  }
+
+  // Theme Management
+  initTheme(): void {
+    const savedTheme = localStorage.getItem('ttt_theme');
+    if (savedTheme) {
+      this.isDarkMode = savedTheme === 'dark';
+    } else {
+      // Default to dark theme, but check system preference
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      this.isDarkMode = prefersDark;
+    }
+  }
+
+  toggleTheme(): void {
+    this.isDarkMode = !this.isDarkMode;
+    localStorage.setItem('ttt_theme', this.isDarkMode ? 'dark' : 'light');
+  }
+
+  // Player Names Management
+  initPlayerNames(): void {
+    const savedX = localStorage.getItem('ttt_player_x');
+    const savedO = localStorage.getItem('ttt_player_o');
+    if (savedX) this.playerXName = savedX;
+    if (savedO) this.playerOName = savedO;
+  }
+
+  savePlayerNames(): void {
+    if (!this.playerXName.trim()) this.playerXName = 'Player X';
+    if (!this.playerOName.trim()) this.playerOName = 'Player O';
+    localStorage.setItem('ttt_player_x', this.playerXName.trim());
+    localStorage.setItem('ttt_player_o', this.playerOName.trim());
+    this.showNameSettings = false;
+  }
+
+  toggleNameSettings(): void {
+    this.showNameSettings = !this.showNameSettings;
+  }
+
+  getPlayerDisplayName(symbol: string): string {
+    if (symbol === 'X') {
+      return this.playerXName || 'Player X';
+    }
+    if (this.selectedMode === 'AgainstComputer') {
+      return 'Computer (AI)';
+    }
+    return this.playerOName || 'Player O';
+  }
+
+  get currentTurnDisplayName(): string {
+    if (!this.gameState) return '';
+    return this.getPlayerDisplayName(this.gameState.currentPlayer);
+  }
+
+  get winnerDisplayName(): string {
+    if (!this.gameState || !this.gameState.winner) return '';
+    return this.getPlayerDisplayName(this.gameState.winner);
   }
 
   setMode(mode: GameMode): void {

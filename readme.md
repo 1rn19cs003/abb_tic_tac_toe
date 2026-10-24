@@ -1,4 +1,4 @@
-# ABB Tic Tac Toe - Full-Stack Senior Software Engineer Assessment
+# Tic Tac Toe - Full-Stack Senior Software Engineer Assessment
 
 A production-grade, browser-based Tic Tac Toe application built with an **Angular** frontend and a **.NET 8 Web API** backend.
 
@@ -314,4 +314,4 @@ Per the assessment guidelines on AI-assisted development transparency:
 
 ---
 
-*Authored for the Senior Software Engineer Panel Review at ABB.*
+*Production-ready Full-Stack Implementation for Senior Software Engineer Panel Review.*

@@ -1,34 +1,103 @@
-<div class="app-container">
+<div class="app-container" [class.light-theme]="!isDarkMode">
   <!-- Header -->
   <header class="app-header">
     <div class="header-brand">
-      <div class="brand-badge">ABB</div>
+      <div class="brand-badge" aria-hidden="true">✕◯</div>
       <div class="brand-text">
         <h1>Tic Tac Toe</h1>
-        <p class="subtitle">Full-Stack Assessment Application (.NET 8 + Angular)</p>
+        <p class="subtitle">Interactive Full-Stack Game (.NET 8 + Angular)</p>
       </div>
     </div>
 
-    <!-- Mode Selector -->
-    <div class="mode-selector" role="group" aria-label="Game Mode">
+    <div class="header-controls">
+      <!-- Dark / Light Mode Toggle -->
       <button
         type="button"
-        class="mode-btn"
-        [class.active]="selectedMode === 'TwoPlayer'"
-        (click)="setMode('TwoPlayer')">
-        <span class="mode-icon">👥</span>
-        <span>Two Player Mode</span>
+        class="theme-toggle-btn"
+        (click)="toggleTheme()"
+        [attr.aria-label]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+        title="Toggle Dark / Light Theme">
+        <span *ngIf="isDarkMode">☀️ Light</span>
+        <span *ngIf="!isDarkMode">🌙 Dark</span>
       </button>
+
+      <!-- Customize Player Names Toggle -->
       <button
         type="button"
-        class="mode-btn"
-        [class.active]="selectedMode === 'AgainstComputer'"
-        (click)="setMode('AgainstComputer')">
-        <span class="mode-icon">🤖</span>
-        <span>Play Against Computer</span>
+        class="name-settings-toggle-btn"
+        (click)="toggleNameSettings()"
+        title="Customize player names">
+        <span>✏️ Player Names</span>
       </button>
+
+      <!-- Mode Selector -->
+      <div class="mode-selector" role="group" aria-label="Game Mode">
+        <button
+          type="button"
+          class="mode-btn"
+          [class.active]="selectedMode === 'TwoPlayer'"
+          (click)="setMode('TwoPlayer')">
+          <span class="mode-icon">👥</span>
+          <span>Two Player</span>
+        </button>
+        <button
+          type="button"
+          class="mode-btn"
+          [class.active]="selectedMode === 'AgainstComputer'"
+          (click)="setMode('AgainstComputer')">
+          <span class="mode-icon">🤖</span>
+          <span>Vs Computer</span>
+        </button>
+      </div>
     </div>
   </header>
+
+  <!-- Player Names Customization Bar -->
+  <section *ngIf="showNameSettings" class="name-settings-card">
+    <div class="name-settings-header">
+      <h4>👤 Custom Player Names</h4>
+      <button type="button" class="btn-close" (click)="toggleNameSettings()">✕</button>
+    </div>
+    <div class="name-inputs-grid">
+      <div class="name-input-group">
+        <label for="playerXInput">Player X (Plays First):</label>
+        <div class="input-wrapper">
+          <span class="player-pill pill-x">X</span>
+          <input
+            id="playerXInput"
+            type="text"
+            maxlength="20"
+            [(ngModel)]="playerXName"
+            placeholder="Enter name (e.g. Alice)"
+            class="name-input" />
+        </div>
+      </div>
+
+      <div class="name-input-group">
+        <label for="playerOInput">Player O:</label>
+        <div class="input-wrapper">
+          <span class="player-pill pill-o">O</span>
+          <input
+            id="playerOInput"
+            type="text"
+            maxlength="20"
+            [(ngModel)]="playerOName"
+            [disabled]="selectedMode === 'AgainstComputer'"
+            [placeholder]="selectedMode === 'AgainstComputer' ? 'Computer (AI)' : 'Enter name (e.g. Bob)'"
+            class="name-input" />
+        </div>
+        <small *ngIf="selectedMode === 'AgainstComputer'" class="hint-ai">
+          Controlled automatically by AI engine
+        </small>
+      </div>
+
+      <div class="name-actions">
+        <button type="button" class="btn btn-save-names" (click)="savePlayerNames()">
+          💾 Save Names
+        </button>
+      </div>
+    </div>
+  </section>
 
   <!-- Error / Alert Banner -->
   <div *ngIf="errorMessage" class="error-banner" role="alert">
@@ -43,7 +112,7 @@
       <div class="score-card player-x">
         <div class="player-icon">✕</div>
         <div class="score-details">
-          <span class="score-label">Player X</span>
+          <span class="score-label">{{ getPlayerDisplayName('X') }}</span>
           <span class="score-value">{{ scoreboard.xWins }}</span>
         </div>
       </div>
@@ -59,7 +128,7 @@
       <div class="score-card player-o">
         <div class="player-icon">◯</div>
         <div class="score-details">
-          <span class="score-label">Player O {{ selectedMode === 'AgainstComputer' ? '(AI)' : '' }}</span>
+          <span class="score-label">{{ getPlayerDisplayName('O') }}</span>
           <span class="score-value">{{ scoreboard.oWins }}</span>
         </div>
       </div>
@@ -84,7 +153,9 @@
         }">
         <ng-container *ngIf="gameState?.gameStatus === 'Won'">
           <span class="status-icon">🏆</span>
-          <span class="status-msg">Player {{ gameState?.winner }} Wins the Game!</span>
+          <span class="status-msg">
+            <strong>{{ winnerDisplayName }}</strong> Wins the Game!
+          </span>
         </ng-container>
 
         <ng-container *ngIf="gameState?.gameStatus === 'Draw'">
@@ -99,8 +170,7 @@
           <span *ngIf="!isAiThinking" class="status-msg">
             Current Turn:
             <strong [class.text-x]="gameState?.currentPlayer === 'X'" [class.text-o]="gameState?.currentPlayer === 'O'">
-              Player {{ gameState?.currentPlayer }}
-              {{ selectedMode === 'AgainstComputer' && gameState?.currentPlayer === 'O' ? '(Computer)' : '' }}
+              {{ currentTurnDisplayName }} ({{ gameState?.currentPlayer }})
             </strong>
           </span>
         </ng-container>
@@ -119,7 +189,7 @@
                 [class.cell-winning]="isWinningCell(row, col)"
                 [disabled]="gameState?.board?.[row]?.[col] !== null || gameState?.gameStatus !== 'InProgress' || isAiThinking"
                 (click)="onCellClick(row, col)"
-                [attr.aria-label]="'Cell ' + (row + 1) + ', ' + (col + 1) + ' ' + (gameState?.board?.[row]?.[col] || 'empty')">
+                [attr.aria-label]="'Cell Row ' + (row + 1) + ', Column ' + (col + 1) + ' ' + (gameState?.board?.[row]?.[col] || 'empty')">
                 <span class="cell-symbol" *ngIf="gameState?.board?.[row]?.[col]">
                   {{ gameState?.board?.[row]?.[col] }}
                 </span>
@@ -173,7 +243,7 @@
                 <td class="col-num">{{ move.moveNumber }}</td>
                 <td class="col-player">
                   <span class="badge-player" [class.badge-x]="move.player === 'X'" [class.badge-o]="move.player === 'O'">
-                    {{ move.player }}
+                    {{ getPlayerDisplayName(move.player) }} ({{ move.player }})
                   </span>
                 </td>
                 <td class="col-pos">{{ move.position }}</td>
@@ -185,7 +255,7 @@
             <div class="empty-history">
               <span class="empty-icon">🎲</span>
               <p>No moves yet in this game.</p>
-              <small>Click any cell to make the first move as <strong>Player X</strong>.</small>
+              <small>Click any cell to make the first move as <strong>{{ getPlayerDisplayName('X') }}</strong>.</small>
             </div>
           </ng-template>
         </div>

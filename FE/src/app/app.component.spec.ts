@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { AppComponent } from './app.component';
 import { GameService } from './services/game.service';
@@ -43,7 +44,7 @@ describe('AppComponent', () => {
     mockGameService.getScoreboard.and.returnValue(of({ xWins: 0, oWins: 0, draws: 0 }));
 
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
+      imports: [HttpClientTestingModule, FormsModule],
       declarations: [AppComponent],
       providers: [{ provide: GameService, useValue: mockGameService }]
     }).compileComponents();
@@ -70,6 +71,25 @@ describe('AppComponent', () => {
 
     expect(component.selectedMode).toBe('AgainstComputer');
     expect(mockGameService.createGame).toHaveBeenCalledWith('AgainstComputer');
+  });
+
+  it('should toggle theme between dark and light', () => {
+    const initialTheme = component.isDarkMode;
+    component.toggleTheme();
+    expect(component.isDarkMode).toBe(!initialTheme);
+    component.toggleTheme();
+    expect(component.isDarkMode).toBe(initialTheme);
+  });
+
+  it('should use custom player names in display helpers', () => {
+    component.playerXName = 'Alice';
+    component.playerOName = 'Bob';
+
+    expect(component.getPlayerDisplayName('X')).toBe('Alice');
+    expect(component.getPlayerDisplayName('O')).toBe('Bob');
+
+    component.selectedMode = 'AgainstComputer';
+    expect(component.getPlayerDisplayName('O')).toBe('Computer (AI)');
   });
 
   it('should make move when empty cell is clicked', () => {
