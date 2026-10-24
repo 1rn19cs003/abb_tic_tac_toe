@@ -1,0 +1,195 @@
+<div class="app-container">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="brand-badge">ABB</div>
+      <div class="brand-text">
+        <h1>Tic Tac Toe</h1>
+        <p class="subtitle">Full-Stack Assessment Application (.NET 8 + Angular)</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="mode-selector" role="group" aria-label="Game Mode">
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="selectedMode === 'TwoPlayer'"
+        (click)="setMode('TwoPlayer')">
+        <span class="mode-icon">👥</span>
+        <span>Two Player Mode</span>
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="selectedMode === 'AgainstComputer'"
+        (click)="setMode('AgainstComputer')">
+        <span class="mode-icon">🤖</span>
+        <span>Play Against Computer</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Error / Alert Banner -->
+  <div *ngIf="errorMessage" class="error-banner" role="alert">
+    <span class="error-icon">⚠️</span>
+    <span class="error-text">{{ errorMessage }}</span>
+    <button type="button" class="dismiss-btn" (click)="dismissError()" aria-label="Dismiss">✕</button>
+  </div>
+
+  <!-- Scoreboard -->
+  <section class="scoreboard-section">
+    <div class="score-cards">
+      <div class="score-card player-x">
+        <div class="player-icon">✕</div>
+        <div class="score-details">
+          <span class="score-label">Player X</span>
+          <span class="score-value">{{ scoreboard.xWins }}</span>
+        </div>
+      </div>
+
+      <div class="score-card draws">
+        <div class="player-icon">🤝</div>
+        <div class="score-details">
+          <span class="score-label">Draws</span>
+          <span class="score-value">{{ scoreboard.draws }}</span>
+        </div>
+      </div>
+
+      <div class="score-card player-o">
+        <div class="player-icon">◯</div>
+        <div class="score-details">
+          <span class="score-label">Player O {{ selectedMode === 'AgainstComputer' ? '(AI)' : '' }}</span>
+          <span class="score-value">{{ scoreboard.oWins }}</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-secondary reset-score-btn" (click)="onResetScoreboard()">
+      <span>🔄 Reset Scoreboard</span>
+    </button>
+  </section>
+
+  <!-- Main Game Layout -->
+  <div class="game-layout">
+    <!-- Left Column: Board & Controls -->
+    <main class="board-column">
+      <!-- Status Banner -->
+      <div
+        class="status-banner"
+        [ngClass]="{
+          'status-won': gameState?.gameStatus === 'Won',
+          'status-draw': gameState?.gameStatus === 'Draw',
+          'status-turn': gameState?.gameStatus === 'InProgress'
+        }">
+        <ng-container *ngIf="gameState?.gameStatus === 'Won'">
+          <span class="status-icon">🏆</span>
+          <span class="status-msg">Player {{ gameState?.winner }} Wins the Game!</span>
+        </ng-container>
+
+        <ng-container *ngIf="gameState?.gameStatus === 'Draw'">
+          <span class="status-icon">🤝</span>
+          <span class="status-msg">The game is a Draw!</span>
+        </ng-container>
+
+        <ng-container *ngIf="gameState?.gameStatus === 'InProgress'">
+          <span *ngIf="isAiThinking" class="status-msg thinking">
+            <span class="spinner"></span> Computer is calculating move...
+          </span>
+          <span *ngIf="!isAiThinking" class="status-msg">
+            Current Turn:
+            <strong [class.text-x]="gameState?.currentPlayer === 'X'" [class.text-o]="gameState?.currentPlayer === 'O'">
+              Player {{ gameState?.currentPlayer }}
+              {{ selectedMode === 'AgainstComputer' && gameState?.currentPlayer === 'O' ? '(Computer)' : '' }}
+            </strong>
+          </span>
+        </ng-container>
+      </div>
+
+      <!-- 3x3 Board Grid -->
+      <div class="board-container">
+        <div class="board-grid" [class.board-locked]="gameState?.gameStatus !== 'InProgress' || isAiThinking">
+          <ng-container *ngFor="let row of [0, 1, 2]">
+            <ng-container *ngFor="let col of [0, 1, 2]">
+              <button
+                type="button"
+                class="board-cell"
+                [class.cell-x]="gameState?.board?.[row]?.[col] === 'X'"
+                [class.cell-o]="gameState?.board?.[row]?.[col] === 'O'"
+                [class.cell-winning]="isWinningCell(row, col)"
+                [disabled]="gameState?.board?.[row]?.[col] !== null || gameState?.gameStatus !== 'InProgress' || isAiThinking"
+                (click)="onCellClick(row, col)"
+                [attr.aria-label]="'Cell ' + (row + 1) + ', ' + (col + 1) + ' ' + (gameState?.board?.[row]?.[col] || 'empty')">
+                <span class="cell-symbol" *ngIf="gameState?.board?.[row]?.[col]">
+                  {{ gameState?.board?.[row]?.[col] }}
+                </span>
+              </button>
+            </ng-container>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Actions Toolbar -->
+      <div class="actions-toolbar">
+        <button
+          type="button"
+          class="btn btn-action btn-undo"
+          [disabled]="!gameState?.canUndo || isLoading || isAiThinking"
+          (click)="onUndo()"
+          title="Undo the last move">
+          <span>↩ Undo Last Move</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-action btn-reset"
+          [disabled]="isLoading"
+          (click)="onResetGame()"
+          title="Clear current board and start fresh game">
+          <span>⚡ Reset Game</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- Right Column: Move History -->
+    <aside class="history-column">
+      <div class="history-card">
+        <div class="history-header">
+          <h3>📜 Move History</h3>
+          <span class="move-count">{{ gameState?.moveHistory?.length || 0 }} moves</span>
+        </div>
+
+        <div class="history-table-container">
+          <table class="history-table" *ngIf="gameState?.moveHistory && gameState!.moveHistory.length > 0; else noMoves">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Position</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let move of gameState!.moveHistory" [class.latest-move]="move.moveNumber === gameState!.moveHistory.length">
+                <td class="col-num">{{ move.moveNumber }}</td>
+                <td class="col-player">
+                  <span class="badge-player" [class.badge-x]="move.player === 'X'" [class.badge-o]="move.player === 'O'">
+                    {{ move.player }}
+                  </span>
+                </td>
+                <td class="col-pos">{{ move.position }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <ng-template #noMoves>
+            <div class="empty-history">
+              <span class="empty-icon">🎲</span>
+              <p>No moves yet in this game.</p>
+              <small>Click any cell to make the first move as <strong>Player X</strong>.</small>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
